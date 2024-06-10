@@ -178,14 +178,14 @@ impl Verifier {
         let mut As = Vec::with_capacity(m);
         let mut R_coeffs = Vec::with_capacity(self.batch_size);
         let mut Rs = Vec::with_capacity(self.batch_size);
-        let mut B_coeff = Scalar::default();
+        let mut B_coeff = Scalar::ZERO;
 
         for (vk_bytes, sigs) in self.signatures.iter() {
             let A = CompressedEdwardsY(vk_bytes.0)
                 .decompress()
                 .ok_or(Error::InvalidSignature)?;
 
-            let mut A_coeff = Scalar::default();
+            let mut A_coeff = Scalar::ZERO;
 
             for (k, sig) in sigs.iter() {
                 let R = CompressedEdwardsY(sig.R_bytes)

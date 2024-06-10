@@ -12,7 +12,7 @@ use util::TestCase;
 #[allow(non_snake_case)]
 pub static SMALL_ORDER_SIGS: Lazy<Vec<TestCase>> = Lazy::new(|| {
     let mut tests = Vec::new();
-    let s = Scalar::default();
+    let s = Scalar::ZERO;
 
     // Use all the canonical encodings of the 8-torsion points,
     // and the low-order non-canonical encodings.
