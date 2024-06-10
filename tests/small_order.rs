@@ -1,9 +1,10 @@
 use color_eyre::Report;
 use curve25519_dalek::{
-    constants::EIGHT_TORSION, edwards::CompressedEdwardsY, scalar::Scalar, traits::IsIdentity,
+    constants::EIGHT_TORSION, digest::Update, edwards::CompressedEdwardsY, scalar::Scalar,
+    traits::IsIdentity,
 };
 use once_cell::sync::Lazy;
-use sha2::{Digest, Sha512};
+use sha2::Sha512;
 
 mod util;
 use util::TestCase;
@@ -47,15 +48,12 @@ pub static SMALL_ORDER_SIGS: Lazy<Vec<TestCase>> = Lazy::new(|| {
             // * R is not an excluded point
             // * R + [k]A = 0
             // * R is canonically encoded (because the check recomputes R)
-            let k = {
-                let hash = Sha512::default()
+            let k = Scalar::from_hash(
+                Sha512::default()
                     .chain(&sig_bytes[0..32])
                     .chain(vk_bytes)
-                    .chain(b"Zcash");
-                let mut output = [0u8; 64];
-                output.copy_from_slice(hash.finalize().as_slice());
-                Scalar::from_bytes_mod_order_wide(&output)
-            };
+                    .chain(b"Zcash"),
+            );
             let check = R + k * A;
             let non_canonical_R = R.compress().as_bytes() != R_bytes;
             let valid_legacy = if vk_bytes == [0; 32]

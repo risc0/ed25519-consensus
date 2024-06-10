@@ -1,13 +1,14 @@
 use core::convert::{TryFrom, TryInto};
 
 use curve25519_dalek::{
+    digest::Update,
     edwards::{CompressedEdwardsY, EdwardsPoint},
     scalar::Scalar,
     traits::IsIdentity,
 };
-use sha2::{Digest, Sha512};
+use sha2::Sha512;
 
-use crate::{scalar_from_hash, Error, Signature};
+use crate::{Error, Signature};
 
 /// A refinement type for `[u8; 32]` indicating that the bytes represent an
 /// encoding of an Ed25519 verification key.
@@ -223,7 +224,7 @@ impl VerificationKey {
     /// [ps]: https://zips.z.cash/protocol/protocol.pdf#concreteed25519
     /// [ZIP215]: https://github.com/zcash/zips/blob/master/zip-0215.rst
     pub fn verify(&self, signature: &Signature, msg: &[u8]) -> Result<(), Error> {
-        let k = scalar_from_hash(
+        let k = Scalar::from_hash(
             Sha512::default()
                 .chain(&signature.R_bytes[..])
                 .chain(&self.A_bytes.0[..])

@@ -51,14 +51,15 @@
 use std::{collections::HashMap, convert::TryFrom};
 
 use curve25519_dalek::{
+    digest::Update,
     edwards::{CompressedEdwardsY, EdwardsPoint},
     scalar::Scalar,
     traits::{IsIdentity, VartimeMultiscalarMul},
 };
 use rand_core::{CryptoRng, RngCore};
-use sha2::{Digest, Sha512};
+use sha2::Sha512;
 
-use crate::{scalar_from_hash, Error, Signature, VerificationKey, VerificationKeyBytes};
+use crate::{Error, Signature, VerificationKey, VerificationKeyBytes};
 
 // Shim to generate a u128 without importing `rand`.
 fn gen_u128<R: RngCore + CryptoRng>(mut rng: R) -> u128 {
@@ -83,7 +84,7 @@ impl<'msg, M: AsRef<[u8]> + ?Sized> From<(VerificationKeyBytes, Signature, &'msg
     fn from(tup: (VerificationKeyBytes, Signature, &'msg M)) -> Self {
         let (vk_bytes, sig, msg) = tup;
         // Compute k now to avoid dependency on the msg lifetime.
-        let k = scalar_from_hash(
+        let k = Scalar::from_hash(
             Sha512::default()
                 .chain(&sig.R_bytes[..])
                 .chain(&vk_bytes.0[..])
