@@ -7,7 +7,7 @@ use curve25519_dalek::{
 };
 use sha2::{Digest, Sha512};
 
-use crate::{Error, Signature};
+use crate::{scalar_from_hash, Error, Signature};
 
 /// A refinement type for `[u8; 32]` indicating that the bytes represent an
 /// encoding of an Ed25519 verification key.
@@ -223,7 +223,7 @@ impl VerificationKey {
     /// [ps]: https://zips.z.cash/protocol/protocol.pdf#concreteed25519
     /// [ZIP215]: https://github.com/zcash/zips/blob/master/zip-0215.rst
     pub fn verify(&self, signature: &Signature, msg: &[u8]) -> Result<(), Error> {
-        let k = Scalar::from_hash(
+        let k = scalar_from_hash(
             Sha512::default()
                 .chain(&signature.R_bytes[..])
                 .chain(&self.A_bytes.0[..])
@@ -237,7 +237,8 @@ impl VerificationKey {
     #[allow(non_snake_case)]
     pub(crate) fn verify_prehashed(&self, signature: &Signature, k: Scalar) -> Result<(), Error> {
         // `s_bytes` MUST represent an integer less than the prime `l`.
-        let s = Scalar::from_canonical_bytes(signature.s_bytes).ok_or(Error::InvalidSignature)?;
+        let s = Option::from(Scalar::from_canonical_bytes(signature.s_bytes))
+            .ok_or(Error::InvalidSignature)?;
         // `R_bytes` MUST be an encoding of a point on the twisted Edwards form of Curve25519.
         let R = CompressedEdwardsY(signature.R_bytes)
             .decompress()

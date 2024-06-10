@@ -11,7 +11,7 @@ use util::TestCase;
 #[allow(non_snake_case)]
 pub static SMALL_ORDER_SIGS: Lazy<Vec<TestCase>> = Lazy::new(|| {
     let mut tests = Vec::new();
-    let s = Scalar::zero();
+    let s = Scalar::default();
 
     // Use all the canonical encodings of the 8-torsion points,
     // and the low-order non-canonical encodings.
@@ -47,12 +47,15 @@ pub static SMALL_ORDER_SIGS: Lazy<Vec<TestCase>> = Lazy::new(|| {
             // * R is not an excluded point
             // * R + [k]A = 0
             // * R is canonically encoded (because the check recomputes R)
-            let k = Scalar::from_hash(
-                Sha512::default()
+            let k = {
+                let hash = Sha512::default()
                     .chain(&sig_bytes[0..32])
                     .chain(vk_bytes)
-                    .chain(b"Zcash"),
-            );
+                    .chain(b"Zcash");
+                let mut output = [0u8; 64];
+                output.copy_from_slice(hash.finalize().as_slice());
+                Scalar::from_bytes_mod_order_wide(&output)
+            };
             let check = R + k * A;
             let non_canonical_R = R.compress().as_bytes() != R_bytes;
             let valid_legacy = if vk_bytes == [0; 32]
@@ -86,6 +89,7 @@ fn conformance() -> Result<(), Report> {
 }
 
 #[test]
+#[cfg(feature = "std")]
 fn individual_matches_batch_verification() -> Result<(), Report> {
     use ed25519_consensus::{batch, Signature, VerificationKey, VerificationKeyBytes};
     use std::convert::TryFrom;

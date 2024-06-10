@@ -58,7 +58,7 @@ use curve25519_dalek::{
 use rand_core::{CryptoRng, RngCore};
 use sha2::{Digest, Sha512};
 
-use crate::{Error, Signature, VerificationKey, VerificationKeyBytes};
+use crate::{scalar_from_hash, Error, Signature, VerificationKey, VerificationKeyBytes};
 
 // Shim to generate a u128 without importing `rand`.
 fn gen_u128<R: RngCore + CryptoRng>(mut rng: R) -> u128 {
@@ -83,7 +83,7 @@ impl<'msg, M: AsRef<[u8]> + ?Sized> From<(VerificationKeyBytes, Signature, &'msg
     fn from(tup: (VerificationKeyBytes, Signature, &'msg M)) -> Self {
         let (vk_bytes, sig, msg) = tup;
         // Compute k now to avoid dependency on the msg lifetime.
-        let k = Scalar::from_hash(
+        let k = scalar_from_hash(
             Sha512::default()
                 .chain(&sig.R_bytes[..])
                 .chain(&vk_bytes.0[..])
@@ -177,20 +177,21 @@ impl Verifier {
         let mut As = Vec::with_capacity(m);
         let mut R_coeffs = Vec::with_capacity(self.batch_size);
         let mut Rs = Vec::with_capacity(self.batch_size);
-        let mut B_coeff = Scalar::zero();
+        let mut B_coeff = Scalar::default();
 
         for (vk_bytes, sigs) in self.signatures.iter() {
             let A = CompressedEdwardsY(vk_bytes.0)
                 .decompress()
                 .ok_or(Error::InvalidSignature)?;
 
-            let mut A_coeff = Scalar::zero();
+            let mut A_coeff = Scalar::default();
 
             for (k, sig) in sigs.iter() {
                 let R = CompressedEdwardsY(sig.R_bytes)
                     .decompress()
                     .ok_or(Error::InvalidSignature)?;
-                let s = Scalar::from_canonical_bytes(sig.s_bytes).ok_or(Error::InvalidSignature)?;
+                let s: Scalar = Option::from(Scalar::from_canonical_bytes(sig.s_bytes))
+                    .ok_or(Error::InvalidSignature)?;
                 let z = Scalar::from(gen_u128(&mut rng));
                 B_coeff -= z * s;
                 Rs.push(R);
