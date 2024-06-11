@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use rand::thread_rng;
 
 use ed25519_consensus::*;
